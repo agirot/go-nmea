@@ -1,6 +1,7 @@
 package nmea
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -41,7 +42,6 @@ type BaseSentence struct {
 	Talker   string   // The talker id (e.g GP)
 	Type     string   // The data type (e.g GSA)
 	Fields   []string // Array of fields
-	Checksum string   // The Checksum
 	Raw      string   // The raw NMEA sentence received
 	TagBlock TagBlock // NMEA tagblock
 }
@@ -84,29 +84,21 @@ func parseSentence(raw string) (BaseSentence, error) {
 
 	startIndex := strings.IndexAny(raw, SentenceStart+SentenceStartEncapsulated)
 	if startIndex != 0 {
-		return BaseSentence{}, fmt.Errorf("nmea: sentence does not start with a '$' or '!'")
+		return BaseSentence{}, errors.New("nmea: sentence does not start with a '$' or '!'")
 	}
 	sumSepIndex := strings.Index(raw, ChecksumSep)
 	if sumSepIndex == -1 {
-		return BaseSentence{}, fmt.Errorf("nmea: sentence does not contain checksum separator")
+		return BaseSentence{}, errors.New("nmea: sentence does not contain checksum separator")
 	}
 	var (
 		fieldsRaw   = raw[startIndex+1 : sumSepIndex]
 		fields      = strings.Split(fieldsRaw, FieldSep)
-		checksumRaw = strings.ToUpper(raw[sumSepIndex+1:])
-		checksum    = Checksum(fieldsRaw)
 	)
-	// Validate the checksum
-	if checksum != checksumRaw {
-		return BaseSentence{}, fmt.Errorf(
-			"nmea: sentence checksum mismatch [%s != %s]", checksum, checksumRaw)
-	}
 	talker, typ := parsePrefix(fields[0])
 	return BaseSentence{
 		Talker:   talker,
 		Type:     typ,
 		Fields:   fields[1:],
-		Checksum: checksumRaw,
 		Raw:      raw,
 		TagBlock: tagBlock,
 	}, nil
@@ -219,5 +211,5 @@ func Parse(raw string) (Sentence, error) {
 			return newVDMVDO(s)
 		}
 	}
-	return nil, fmt.Errorf("nmea: sentence prefix '%s' not supported", s.Prefix())
+	return nil, errors.New("nmea: sentence prefix not supported")
 }

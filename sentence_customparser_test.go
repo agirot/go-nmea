@@ -1,7 +1,6 @@
 package nmea
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,7 +28,6 @@ var customparsetests = []struct {
 				Talker:   "AA",
 				Type:     "YYY",
 				Fields:   []string{"20", "one", ""},
-				Checksum: "13",
 				Raw:      "$AAYYY,20,one,*13",
 			},
 			NumberValue: 20,
@@ -44,7 +42,6 @@ var customparsetests = []struct {
 				Talker:   "AA",
 				Type:     "ZZZ",
 				Fields:   []string{"30", "two", ""},
-				Checksum: "19",
 				Raw:      "$AAZZZ,30,two,*19",
 			},
 			NumberValue: 30,
@@ -64,7 +61,6 @@ var customparsetests = []struct {
 				Talker:   "GP",
 				Type:     "ZDA",
 				Fields:   []string{"172809.456", "12", "07", "1996", "00", "00"},
-				Checksum: "57",
 				Raw:      "$GPZDA,172809.456,12,07,1996,00,00*57",
 			},
 			Time:          Time{Valid: true, Hour: 17, Minute: 28, Second: 9, Millisecond: 456},
@@ -83,12 +79,6 @@ func init() {
 	MustRegisterParser("YYY", func(s BaseSentence) (Sentence, error) {
 		// Somewhat error prone parser without deps
 		fields := strings.Split(s.Raw, ",")
-		checksum := Checksum(s.Raw[1 : len(s.Raw)-3])
-		checksumRaw := s.Raw[len(s.Raw)-2:]
-
-		if checksum != checksumRaw {
-			return nil, fmt.Errorf("nmea: sentence checksum mismatch [%s != %s]", checksum, checksumRaw)
-		}
 
 		nummericValue, _ := strconv.Atoi(fields[1])
 		return TestZZZ{
